@@ -3,18 +3,36 @@ from scipy.spatial.distance import cdist
 
 def find_nearest_points(points1, points2, metric='euclidean'):
     """
-    Находит ближайшие точки во втором облаке для каждой точки в первом облаке.
+    Находит ближайшие точки во втором облаке для каждой точки в первом облаке,
+    гарантируя, что каждая точка во втором облаке может быть ближайшей только для одной точки из первого облака,
+    и учитывая условие, что ближайшей может считаться только та точка, минимальное расстояние до которой меньше 1.
     
     :param points1: Первый набор точек.
     :param points2: Второй набор точек.
     :param metric: Метрика расстояния ('euclidean', 'cityblock' и т.д.).
-    :return: Список пар (точка из первого облака, ближайшая точка из второго облака).
+    :return: Список пар (точка из первого облака, ближайшая точка из второго облака), удовлетворяющих условиям.
     """
-    distances = cdist(points1, points2, metric=metric)
-    nearest_indices = np.argmin(distances, axis=1)
-    nearest_points = points2[nearest_indices]
-    pairs = list(zip(points1, nearest_points))
-    return pairs
+    # Инициализация списка пар
+    valid_pairs = []
+    
+    # Повторяем процесс для каждой точки в первом облаке
+    for point1 in points1:
+        # Вычисляем расстояния от текущей точки первого облака до всех точек второго облака
+        distances = cdist(np.array([point1]), points2, metric=metric)
+        
+        # Находим индекс ближайшей точки во втором облаке
+        nearest_index = np.argmin(distances)
+        
+        # Проверяем, удовлетворяет ли минимальное расстояние условию (меньше 1)
+        min_distance = distances[0][nearest_index]
+        if min_distance < 1:
+            # Добавляем пару (точка из первого облака, ближайшая точка из второго облака) в список
+            valid_pairs.append((point1, points2[nearest_index]))
+            
+            # Удаляем найденную ближайшую точку из второго облака, чтобы она не могла быть выбрана снова
+            points2 = np.delete(points2, nearest_index, axis=0)
+    
+    return valid_pairs
 
 # Генерация облаков точек
 points1 = np.random.rand(3, 3)  # Первое облако из 3 точек
